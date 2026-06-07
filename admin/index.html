@@ -1,12 +1,391 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — the cass8 archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1a18;
+    --ink2: #5a5a54;
+    --ink3: #9a9a90;
+    --paper: #faf9f6;
+    --paper2: #f2f0eb;
+    --paper3: #e8e5de;
+    --line: #d8d4cb;
+    --accent: #2a2a26;
+    --red: #c0392b;
+    --green: #27613a;
+  }
+
+  body { font-family: 'EB Garamond', Georgia, serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+
+  header { border-bottom: 1px solid var(--line); padding: 1.5rem 2.5rem; display: flex; align-items: baseline; justify-content: space-between; }
+  header h1 { font-size: 1.1rem; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; }
+  header a { font-size: 0.85rem; color: var(--ink2); text-decoration: none; letter-spacing: 0.06em; }
+  header a:hover { color: var(--ink); }
+
+  .container { max-width: 780px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+
+  .section-label { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink3); margin-bottom: 1rem; }
+
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 3px; padding: 1.75rem; margin-bottom: 2rem; }
+
+  .field { margin-bottom: 1.25rem; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; font-size: 0.82rem; color: var(--ink2); margin-bottom: 0.4rem; letter-spacing: 0.04em; }
+  .field input, .field textarea, .field select {
+    width: 100%; padding: 0.6rem 0.75rem; font-family: 'DM Mono', monospace; font-size: 0.8rem;
+    border: 1px solid var(--line); border-radius: 2px; background: var(--paper);
+    color: var(--ink); transition: border-color 0.15s; resize: vertical;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--ink2); background: #fff; }
+  .field textarea { min-height: 90px; line-height: 1.6; }
+  .field select { cursor: pointer; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+  .overlay-section { border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 1.25rem; }
+  .toggle-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; cursor: pointer; }
+  .toggle-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ink); }
+  .toggle-row span { font-size: 0.85rem; color: var(--ink2); }
+  .overlay-fields { display: none; }
+  .overlay-fields.open { display: block; }
+
+  .color-row { display: flex; align-items: center; gap: 0.75rem; }
+  .color-row input[type=color] { width: 44px; height: 34px; border: 1px solid var(--line); border-radius: 2px; padding: 2px; cursor: pointer; background: var(--paper); }
+  .color-row input[type=text] { flex: 1; }
+
+  .font-preview { margin-top: 0.5rem; font-size: 1rem; color: var(--ink2); min-height: 1.5rem; padding: 0.4rem 0; border-bottom: 1px solid var(--line); }
+
+  .btn-row { display: flex; gap: 1rem; align-items: center; margin-top: 2rem; }
+  .btn { padding: 0.65rem 1.75rem; font-family: 'DM Mono', monospace; font-size: 0.78rem; letter-spacing: 0.08em; border-radius: 2px; cursor: pointer; transition: all 0.15s; border: 1px solid; }
+  .btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .btn-primary:hover { background: #333; }
+  .btn-secondary { background: transparent; color: var(--ink2); border-color: var(--line); }
+  .btn-secondary:hover { border-color: var(--ink2); color: var(--ink); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .status { font-family: 'DM Mono', monospace; font-size: 0.75rem; padding: 0.5rem 0.85rem; border-radius: 2px; display: none; }
+  .status.ok { display: inline-block; background: #eaf4ec; color: var(--green); border: 1px solid #b8dfc0; }
+  .status.err { display: inline-block; background: #fdf0ef; color: var(--red); border: 1px solid #f0c0bb; }
+  .status.loading { display: inline-block; background: var(--paper2); color: var(--ink2); border: 1px solid var(--line); }
+
+  /* queue */
+  .queue-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1rem; }
+  .queue-count { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--ink3); }
+  .queue-empty { font-size: 0.9rem; color: var(--ink3); text-align: center; padding: 2.5rem 0; font-style: italic; }
+
+  .queue-item { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 0; border-bottom: 1px solid var(--line); }
+  .queue-item:last-child { border-bottom: none; }
+  .queue-thumb { width: 72px; height: 52px; object-fit: cover; border-radius: 2px; background: var(--paper2); flex-shrink: 0; border: 1px solid var(--line); }
+  .queue-thumb-ph { width: 72px; height: 52px; border-radius: 2px; background: var(--paper2); flex-shrink: 0; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--ink3); }
+  .queue-info { flex: 1; min-width: 0; }
+  .queue-title { font-size: 0.95rem; font-weight: 500; margin-bottom: 2px; }
+  .queue-game { font-size: 0.78rem; color: var(--ink2); margin-bottom: 4px; }
+  .queue-url { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .queue-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .badge { font-family: 'DM Mono', monospace; font-size: 0.62rem; padding: 2px 7px; border-radius: 20px; background: var(--paper2); color: var(--ink2); border: 1px solid var(--line); }
+  .queue-del { background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 1.1rem; padding: 4px; line-height: 1; flex-shrink: 0; transition: color 0.15s; }
+  .queue-del:hover { color: var(--red); }
+
+  /* publish bar */
+  .publish-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--line); padding: 1rem 2.5rem; display: flex; align-items: center; gap: 1.5rem; }
+  .publish-bar .btn { min-width: 140px; }
+</style>
 </head>
 <body>
-    <h1>Admin Page</h1>
-    <p><strong>Strawberry Fun Fact:</strong> Strawberries can have between 200 to 300 seeds on their surface! Each of those tiny specks is actually a separate seed, making strawberries one of the only fruits that wear their seeds on the outside.</p>
+
+<header>
+  <h1>the cass8 archive &mdash; admin</h1>
+  <a href="/">← view gallery</a>
+</header>
+
+<div class="container">
+
+  <!-- ADD IMAGE FORM -->
+  <div class="section-label">Add photograph</div>
+  <div class="card">
+    <div class="field">
+      <label>Raw GitHub image URL</label>
+      <input type="url" id="img-url" placeholder="https://raw.githubusercontent.com/Rohit4738/cass8-archive-pics-source/main/photos/..." />
+    </div>
+    <div class="two-col">
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="img-title" placeholder="e.g. city at dusk" />
+      </div>
+      <div class="field">
+        <label>Game / series tag</label>
+        <input type="text" id="img-game" placeholder="e.g. Cyberpunk 2077" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Lightroom edit screenshot URL <span style="color:var(--ink3)">(optional)</span></label>
+      <input type="url" id="img-edit" placeholder="https://raw.githubusercontent.com/Rohit4738/cass8-archive-pics-source/main/edits/..." />
+    </div>
+
+    <!-- OVERLAY -->
+    <div class="overlay-section">
+      <label class="toggle-row">
+        <input type="checkbox" id="overlay-toggle" onchange="toggleOverlay(this)">
+        <span>Add quote / subtitle overlay</span>
+      </label>
+      <div class="overlay-fields" id="overlay-fields">
+        <div class="field">
+          <label>Quote or subtitle text</label>
+          <textarea id="overlay-text" placeholder="the city never sleeps..." oninput="updateFontPreview()"></textarea>
+        </div>
+        <div class="two-col">
+          <div class="field">
+            <label>Position</label>
+            <select id="overlay-pos">
+              <option value="top-left">Top left</option>
+              <option value="top-center">Top center</option>
+              <option value="top-right">Top right</option>
+              <option value="center">Center</option>
+              <option value="bottom-left">Bottom left</option>
+              <option value="bottom-center" selected>Bottom center</option>
+              <option value="bottom-right">Bottom right</option>
+              <option value="subtitle">Subtitle (below image)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Font</label>
+            <select id="overlay-font" onchange="updateFontPreview()">
+              <option value="'EB Garamond', serif">EB Garamond (serif)</option>
+              <option value="'Georgia', serif">Georgia</option>
+              <option value="'DM Mono', monospace">DM Mono</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="'Times New Roman', serif">Times New Roman</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Text colour</label>
+          <div class="color-row">
+            <input type="color" id="overlay-color-pick" value="#ffffff" oninput="syncColor(this)">
+            <input type="text" id="overlay-color-text" value="#ffffff" oninput="syncColorText(this)" placeholder="#ffffff">
+          </div>
+        </div>
+        <div class="field">
+          <label>Font size</label>
+          <select id="overlay-size">
+            <option value="0.75rem">Small</option>
+            <option value="1rem" selected>Medium</option>
+            <option value="1.35rem">Large</option>
+            <option value="1.75rem">Extra large</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Preview</label>
+          <div class="font-preview" id="font-preview">your text will appear like this</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="addToQueue()">Add to queue</button>
+      <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+      <span class="status" id="add-status"></span>
+    </div>
+  </div>
+
+  <!-- QUEUE -->
+  <div class="section-label">Queue</div>
+  <div class="card">
+    <div class="queue-header">
+      <span class="section-label" style="margin:0">Pending publish</span>
+      <span class="queue-count" id="queue-count">0 images</span>
+    </div>
+    <div id="queue-list"><div class="queue-empty">No images in queue. Add one above.</div></div>
+  </div>
+
+  <!-- LIVE GALLERY -->
+  <div class="section-label">Published</div>
+  <div class="card">
+    <div class="queue-header">
+      <span class="section-label" style="margin:0">Live in gallery</span>
+      <span class="queue-count" id="live-count">loading...</span>
+    </div>
+    <div id="live-list"><div class="queue-empty">Loading...</div></div>
+  </div>
+
+</div>
+
+<!-- PUBLISH BAR -->
+<div class="publish-bar">
+  <button class="btn btn-primary" id="publish-btn" onclick="publishQueue()" disabled>Publish queue to gallery</button>
+  <span class="status" id="publish-status"></span>
+</div>
+
+<script>
+let queue = [];
+let live = [];
+
+function toggleOverlay(cb) {
+  document.getElementById('overlay-fields').classList.toggle('open', cb.checked);
+}
+
+function syncColor(picker) {
+  document.getElementById('overlay-color-text').value = picker.value;
+  updateFontPreview();
+}
+function syncColorText(input) {
+  const v = input.value;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) document.getElementById('overlay-color-pick').value = v;
+  updateFontPreview();
+}
+
+function updateFontPreview() {
+  const text = document.getElementById('overlay-text').value || 'your text will appear like this';
+  const font = document.getElementById('overlay-font').value;
+  const color = document.getElementById('overlay-color-text').value;
+  const prev = document.getElementById('font-preview');
+  prev.style.fontFamily = font;
+  prev.style.color = /^#[0-9a-fA-F]{3,6}$/.test(color) ? color : '#1a1a18';
+  prev.textContent = text;
+}
+
+function showStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status ' + type;
+  if (type === 'ok') setTimeout(() => el.className = 'status', 2500);
+}
+
+function addToQueue() {
+  const url = document.getElementById('img-url').value.trim();
+  if (!url) { showStatus('add-status', 'URL is required', 'err'); return; }
+
+  const hasOverlay = document.getElementById('overlay-toggle').checked;
+  const entry = {
+    id: Date.now().toString(),
+    url,
+    title: document.getElementById('img-title').value.trim() || url.split('/').pop().replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
+    game: document.getElementById('img-game').value.trim() || 'Uncategorised',
+    editUrl: document.getElementById('img-edit').value.trim() || null,
+    quote: hasOverlay ? (document.getElementById('overlay-text').value.trim() || null) : null,
+    quotePosition: hasOverlay ? document.getElementById('overlay-pos').value : null,
+    quoteFont: hasOverlay ? document.getElementById('overlay-font').value : null,
+    quoteColor: hasOverlay ? document.getElementById('overlay-color-text').value : null,
+    quoteSize: hasOverlay ? document.getElementById('overlay-size').value : null,
+  };
+
+  queue.push(entry);
+  renderQueue();
+  clearForm();
+  showStatus('add-status', 'Added to queue', 'ok');
+  document.getElementById('publish-btn').disabled = false;
+}
+
+function clearForm() {
+  ['img-url','img-title','img-game','img-edit','overlay-text'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('overlay-toggle').checked = false;
+  document.getElementById('overlay-fields').classList.remove('open');
+  document.getElementById('overlay-color-pick').value = '#ffffff';
+  document.getElementById('overlay-color-text').value = '#ffffff';
+  document.getElementById('add-status').className = 'status';
+}
+
+function removeFromQueue(id) {
+  queue = queue.filter(i => i.id !== id);
+  renderQueue();
+  document.getElementById('publish-btn').disabled = queue.length === 0;
+}
+
+function removeFromLive(id) {
+  if (!confirm('Remove this image from the live gallery?')) return;
+  live = live.filter(i => i.id !== id);
+  saveLive();
+}
+
+function renderQueue() {
+  const el = document.getElementById('queue-list');
+  document.getElementById('queue-count').textContent = queue.length + ' image' + (queue.length !== 1 ? 's' : '');
+  if (!queue.length) { el.innerHTML = '<div class="queue-empty">No images in queue. Add one above.</div>'; return; }
+  el.innerHTML = queue.map(img => itemHTML(img, true)).join('');
+}
+
+function renderLive() {
+  const el = document.getElementById('live-list');
+  document.getElementById('live-count').textContent = live.length + ' image' + (live.length !== 1 ? 's' : '') + ' live';
+  if (!live.length) { el.innerHTML = '<div class="queue-empty">Nothing published yet.</div>'; return; }
+  el.innerHTML = live.map(img => itemHTML(img, false)).join('');
+}
+
+function itemHTML(img, isQueue) {
+  const badges = [];
+  if (img.game) badges.push(img.game);
+  if (img.quote) badges.push('quote');
+  if (img.editUrl) badges.push('edit preview');
+  return `
+    <div class="queue-item">
+      <img class="queue-thumb" src="${img.url}" alt="" onerror="this.style.display='none'">
+      <div class="queue-info">
+        <div class="queue-title">${img.title}</div>
+        <div class="queue-url">${img.url}</div>
+        <div class="queue-badges">${badges.map(b => `<span class="badge">${b}</span>`).join('')}</div>
+      </div>
+      <button class="queue-del" onclick="${isQueue ? 'removeFromQueue' : 'removeFromLive'}('${img.id}')" title="Remove">×</button>
+    </div>`;
+}
+
+async function publishQueue() {
+  if (!queue.length) return;
+  showStatus('publish-status', 'Publishing...', 'loading');
+  document.getElementById('publish-btn').disabled = true;
+  try {
+    const merged = [...live, ...queue];
+    await saveLiveData(merged);
+    live = merged;
+    queue = [];
+    renderQueue();
+    renderLive();
+    showStatus('publish-status', 'Published — gallery updated', 'ok');
+  } catch(e) {
+    showStatus('publish-status', 'Error: ' + e.message, 'err');
+    document.getElementById('publish-btn').disabled = false;
+  }
+}
+
+async function saveLive() {
+  try {
+    await saveLiveData(live);
+    renderLive();
+  } catch(e) {
+    alert('Error saving: ' + e.message);
+  }
+}
+
+async function saveLiveData(images) {
+  const r = await fetch('/api/save', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ images })
+  });
+  if (!r.ok) throw new Error('API returned ' + r.status);
+}
+
+async function loadLive() {
+  try {
+    const r = await fetch('/api/save');
+    const data = await r.json();
+    live = data.images || [];
+    renderLive();
+  } catch(e) {
+    document.getElementById('live-list').innerHTML = '<div class="queue-empty" style="color:#c0392b">Could not load gallery — check env variables.</div>';
+    document.getElementById('live-count').textContent = 'error';
+  }
+}
+
+loadLive();
+</script>
 </body>
 </html>
