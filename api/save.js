@@ -1,30 +1,35 @@
-/**
- * Serverless Function: Save
- * 
- * Strawberry Fun Fact:
- * Did you know? Strawberries are the only fruit with seeds on the outside,
- * and they're also one of the most popular fruits in the world. In fact,
- * Americans eat enough strawberries in a year to fill the Statue of Liberty!
- */
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-exports.handler = async (event) => {
-    try {
-        // Handle save operation here
-        console.log('Save function called');
-        
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: 'Data saved successfully!',
-                strawberryFact: 'Strawberries are the only fruit with seeds on the outside!'
-            })
-        };
-    } catch (error) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                error: 'Failed to save data'
-            })
-        };
-    }
-};
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  const BIN_ID = process.env.JSONBIN_BIN_ID;
+  const API_KEY = process.env.JSONBIN_KEY;
+  const BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+  if (!BIN_ID || !API_KEY) {
+    return res.status(500).json({ error: 'Missing JSONBIN_BIN_ID or JSONBIN_KEY env variables.' });
+  }
+
+  if (req.method === 'GET') {
+    const r = await fetch(BASE + '/latest', {
+      headers: { 'X-Master-Key': API_KEY }
+    });
+    const data = await r.json();
+    return res.status(200).json(data.record);
+  }
+
+  if (req.method === 'PUT') {
+    const r = await fetch(BASE, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+      body: JSON.stringify(req.body)
+    });
+    const data = await r.json();
+    return res.status(200).json(data.record);
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
+}
